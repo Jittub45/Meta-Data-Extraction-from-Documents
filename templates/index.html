@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Metadata Extractor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+        header h1 {
+            font-size: 2rem;
+            background: linear-gradient(90deg, #00d2ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        header p {
+            color: #9e9e9e;
+            font-size: 0.95rem;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+        }
+        .card h2 {
+            font-size: 1.15rem;
+            margin-bottom: 16px;
+            color: #b8b8ff;
+        }
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed rgba(123, 47, 247, 0.4);
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #7b2ff7;
+            background: rgba(123, 47, 247, 0.08);
+        }
+        .upload-area .icon { font-size: 2.5rem; margin-bottom: 10px; }
+        .upload-area p { color: #aaa; margin-bottom: 6px; }
+        .upload-area .hint { font-size: 0.8rem; color: #666; }
+        .upload-area input[type="file"] {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer;
+        }
+        .file-name {
+            margin-top: 10px;
+            color: #00d2ff;
+            font-weight: 600;
+            display: none;
+        }
+        /* Sample Documents */
+        .samples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .sample-btn {
+            background: rgba(123, 47, 247, 0.15);
+            border: 1px solid rgba(123, 47, 247, 0.3);
+            border-radius: 10px;
+            padding: 14px 16px;
+            color: #d0c4ff;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+        .sample-btn:hover {
+            background: rgba(123, 47, 247, 0.3);
+            border-color: #7b2ff7;
+            transform: translateY(-2px);
+        }
+        .sample-btn .doc-icon { font-size: 1.3rem; margin-bottom: 6px; display: block; }
+        .sample-btn .doc-name { font-weight: 600; display: block; margin-bottom: 4px; }
+        .sample-btn .doc-type { font-size: 0.75rem; color: #888; }
+        /* Extract Button */
+        .extract-btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #7b2ff7, #00d2ff);
+            color: white;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+        }
+        .extract-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .extract-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        /* Loading */
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 30px;
+        }
+        .loader.active { display: block; }
+        .spinner {
+            width: 45px; height: 45px;
+            border: 4px solid rgba(123, 47, 247, 0.2);
+            border-top-color: #7b2ff7;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loader p { color: #aaa; font-size: 0.9rem; }
+        /* Results */
+        .results {
+            display: none;
+        }
+        .results.active { display: block; }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .results-table th, .results-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .results-table th {
+            color: #9e9eff;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .results-table td {
+            color: #e0e0e0;
+            font-size: 0.95rem;
+        }
+        .results-table tr:hover { background: rgba(255, 255, 255, 0.03); }
+        .result-value {
+            color: #00d2ff;
+            font-weight: 600;
+        }
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .results-header h2 { margin-bottom: 0; }
+        .results-filename {
+            font-size: 0.8rem;
+            color: #888;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        /* Error */
+        .error-msg {
+            display: none;
+            background: rgba(255, 50, 50, 0.1);
+            border: 1px solid rgba(255, 50, 50, 0.3);
+            border-radius: 10px;
+            padding: 16px;
+            color: #ff6b6b;
+            text-align: center;
+        }
+        .error-msg.active { display: block; }
+        /* Status badge */
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-badge.success { background: rgba(0, 210, 100, 0.15); color: #00d264; }
+        .status-badge.error { background: rgba(255, 50, 50, 0.15); color: #ff6b6b; }
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #555;
+            font-size: 0.8rem;
+        }
+        footer a { color: #7b2ff7; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Document Metadata Extractor</h1>
+            <p>AI-powered metadata extraction from rental &amp; lease agreements</p>
+        </header>
+
+        <!-- Upload Section -->
+        <div class="card">
+            <h2>Upload Document</h2>
+            <div class="upload-area" id="uploadArea">
+                <div class="icon">📄</div>
+                <p>Drag &amp; drop your document here</p>
+                <p class="hint">or click to browse &mdash; supports .docx and .png files</p>
+                <input type="file" id="fileInput" accept=".docx,.png,.pdf">
+            </div>
+            <div class="file-name" id="fileName"></div>
+            <button class="extract-btn" id="extractBtn" disabled onclick="extractMetadata()">
+                Extract Metadata
+            </button>
+        </div>
+
+        <!-- Sample Documents -->
+        <div class="card">
+            <h2>Or Try a Sample Document</h2>
+            <div class="samples-grid" id="samplesGrid">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div class="loader" id="loader">
+            <div class="spinner"></div>
+            <p>Extracting metadata... this may take a minute due to LLM processing</p>
+        </div>
+
+        <!-- Error -->
+        <div class="error-msg" id="errorMsg"></div>
+
+        <!-- Results -->
+        <div class="card results" id="results">
+            <div class="results-header">
+                <h2>Extracted Metadata</h2>
+                <span class="results-filename" id="resultsFilename"></span>
+            </div>
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Extracted Value</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody">
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+            Powered by Google Gemini &amp; Tesseract OCR &mdash;
+            <a href="/docs" target="_blank">API Docs</a> |
+            <a href="https://github.com/Jittub45/Meta-Data-Extraction-from-Documents" target="_blank">GitHub</a>
+        </footer>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const fileName = document.getElementById('fileName');
+        const extractBtn = document.getElementById('extractBtn');
+        const loader = document.getElementById('loader');
+        const errorMsg = document.getElementById('errorMsg');
+        const results = document.getElementById('results');
+        const resultsBody = document.getElementById('resultsBody');
+        const resultsFilename = document.getElementById('resultsFilename');
+        const samplesGrid = document.getElementById('samplesGrid');
+
+        let selectedFile = null;
+
+        // File input handling
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                selectedFile = e.target.files[0];
+                fileName.textContent = '📎 ' + selectedFile.name;
+                fileName.style.display = 'block';
+                extractBtn.disabled = false;
+            }
+        });
+
+        // Drag & drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                selectedFile = e.dataTransfer.files[0];
+                fileName.textContent = '📎 ' + selectedFile.name;
+                fileName.style.display = 'block';
+                extractBtn.disabled = false;
+            }
+        });
+
+        // Load sample documents
+        async function loadSamples() {
+            try {
+                const resp = await fetch('/samples');
+                const data = await resp.json();
+                samplesGrid.innerHTML = '';
+                data.samples.forEach(sample => {
+                    const btn = document.createElement('button');
+                    btn.className = 'sample-btn';
+                    const ext = sample.name.split('.').pop().toUpperCase();
+                    const icon = ext === 'PNG' ? '🖼️' : '📝';
+                    btn.innerHTML = `
+                        <span class="doc-icon">${icon}</span>
+                        <span class="doc-name">${sample.display_name}</span>
+                        <span class="doc-type">${ext} file</span>
+                    `;
+                    btn.onclick = () => extractSample(sample.name);
+                    samplesGrid.appendChild(btn);
+                });
+            } catch (err) {
+                samplesGrid.innerHTML = '<p style="color:#666">Could not load samples</p>';
+            }
+        }
+
+        // Extract from uploaded file
+        async function extractMetadata() {
+            if (!selectedFile) return;
+            showLoading();
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const resp = await fetch('/extract', { method: 'POST', body: formData });
+                const data = await resp.json();
+
+                if (resp.ok && data.status === 'success') {
+                    showResults(data.filename, data.metadata);
+                } else {
+                    showError(data.error || 'Extraction failed. Please try again.');
+                }
+            } catch (err) {
+                showError('Network error: ' + err.message);
+            }
+        }
+
+        // Extract from sample document
+        async function extractSample(sampleName) {
+            showLoading();
+
+            try {
+                const resp = await fetch('/extract-sample', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: sampleName })
+                });
+                const data = await resp.json();
+
+                if (resp.ok && data.status === 'success') {
+                    showResults(data.filename, data.metadata);
+                } else {
+                    showError(data.error || 'Extraction failed. Please try again.');
+                }
+            } catch (err) {
+                showError('Network error: ' + err.message);
+            }
+        }
+
+        function showLoading() {
+            loader.classList.add('active');
+            results.classList.remove('active');
+            errorMsg.classList.remove('active');
+            extractBtn.disabled = true;
+        }
+
+        function showResults(file, metadata) {
+            loader.classList.remove('active');
+            errorMsg.classList.remove('active');
+            extractBtn.disabled = false;
+
+            resultsFilename.textContent = file;
+            resultsBody.innerHTML = '';
+
+            const fieldLabels = {
+                'Agreement Value': '💰 Agreement Value (Monthly Rent)',
+                'Agreement Start Date': '📅 Start Date',
+                'Agreement End Date': '📅 End Date',
+                'Renewal Notice (Days)': '🔔 Renewal Notice Period',
+                'Party One': '👤 Party One (Lessor/Owner)',
+                'Party Two': '👤 Party Two (Lessee/Tenant)'
+            };
+
+            for (const [key, value] of Object.entries(metadata)) {
+                const tr = document.createElement('tr');
+                const label = fieldLabels[key] || key;
+                let displayVal = value || '—';
+                if (key === 'Agreement Value' && value) displayVal = '₹ ' + Number(value).toLocaleString('en-IN');
+                if (key === 'Renewal Notice (Days)' && value) displayVal = value + ' days';
+
+                tr.innerHTML = `
+                    <td>${label}</td>
+                    <td class="result-value">${displayVal}</td>
+                `;
+                resultsBody.appendChild(tr);
+            }
+
+            results.classList.add('active');
+            results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function showError(msg) {
+            loader.classList.remove('active');
+            extractBtn.disabled = false;
+            errorMsg.textContent = '⚠️ ' + msg;
+            errorMsg.classList.add('active');
+        }
+
+        // Init
+        loadSamples();
+    </script>
+</body>
+</html>
