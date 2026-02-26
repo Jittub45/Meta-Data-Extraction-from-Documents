@@ -11,44 +11,58 @@ An AI-powered system that extracts structured metadata from rental/lease agreeme
 ### Architecture
 
 ```
-Document (.docx/.png) ──▶ Text Extraction ──▶ Prompt Construction ──▶ LLM Inference ──▶ Post-Processing ──▶ JSON/CSV Output
-                          python-docx / OCR    5 few-shot examples     Google Gemini      Title stripping
-                          Tesseract + OpenCV   Chain-of-thought        Multi-model retry  Date & value cleanup
+┌─────────────┐     ┌──────────────────┐     ┌─────────────────────┐     ┌────────────────┐    ┌──────────────────┐     ┌──────────────────┐
+│             │     │                  │     │                     │     │                │    │                  │     │                  │
+│Document     │     │  Text Extraction │     │ Prompt Construction │     │  LLM Inference │    │  Post-Processing │     │  JSON/CSV Output │
+│(.docx /.png)│───▶│  python docx/OCR │────▶│ 5 few-shot examples │───▶│  Google Gemini │───▶│  Title stripping │───▶│  Structured      │
+│             │     │  Tesseract+OpenCV│     │ Chain-of-thought    │     │  Multi-model   │    │  Date & value    │     │  metadata        │
+│             │     │                  │     │                     │     │  retry         │    │  cleanup         │     │                  │
+└─────────────┘     └──────────────────┘     └─────────────────────┘     └────────────────┘    └──────────────────┘     └──────────────────┘
 ```
 
-### Key Design Decisions
+### Per-Field Recall Scores
 
-1. **LLM-Based Extraction (Not Rule-Based)**: Uses Google Gemini with carefully crafted few-shot prompts instead of regex or static conditions. The LLM generalizes across varying document templates and formats.
+<table style="width:100%">
+<tr>
+<td valign="top" style="width:50%">
 
-2. **Advanced OCR Pipeline**: For `.png` files, uses OpenCV preprocessing (adaptive thresholding, denoising, resizing, sharpening) combined with multiple Tesseract PSM modes to maximize text extraction quality.
+**Training Set Recall (10 documents)**
 
-3. **Robust Post-Processing**: Strips honorific titles (Mr., Mrs., Prof., etc.) from party names, normalizes dates to DD.MM.YYYY format, and cleans currency values — all to match the expected ground truth format.
-
-4. **Fault-Tolerant LLM Client**: Implements retry logic (up to 10 attempts), model rotation across 4 Gemini variants, API key rotation, robust JSON parsing with 6 fallback strategies, and metadata validation.
-
-### Modules
-
-| Module | Description |
+| Field | Recall |
 |---|---|
-| `src/text_extractor.py` | Extracts text from `.docx` (python-docx) and `.png` (Tesseract OCR + OpenCV) files |
-| `src/prompt_builder.py` | Builds few-shot prompts with 5 diverse examples and detailed extraction rules |
-| `src/llm_client.py` | Handles Gemini API calls with retry/rotation logic and robust JSON parsing |
-| `src/post_processor.py` | Cleans and normalizes extracted values (titles, dates, numbers) |
-| `src/evaluate.py` | Computes per-field Recall metric |
-| `main.py` | Orchestrates the entire pipeline |
-| `api/app.py` | FastAPI REST API wrapper |
+| Agreement Value | 60% (6/10) |
+| Agreement Start Date | 68% (6/10) |
+| Agreement End Date | 60% (6/10) |
+| Renewal Notice (Days) | 60% (6/10) |
+| Party One | 55% (3/10) |
+| Party Two | 50% (5/10) |
+| **Average Recall** | **73.33%** |
+
+</td>
+<td valign="top" style="width:50%">
+
+**Test Set Recall (4 documents)**
+
+| Field | Recall |
+|---|---|
+| Agreement Value | 80% (4/4) |
+| Agreement Start Date | 75% (3/4) |
+| Agreement End Date | 61% (1/4) |
+| Renewal Notice (Days) | 100% (4/4) |
+| Party One | 100% (4/4) |
+| Party Two | 75% (3/4) |
+| **Average Recall** | **79.2%** |
+
+</td>
+</tr>
+</table>
+
+
 
 ---
 
 ## Setup & Installation
 
-### Prerequisites
-
-- Python 3.10+
-- [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) installed (for `.png` processing)
-  - Windows: Install to `C:\Program Files\Tesseract-OCR\`
-  - Linux: `sudo apt install tesseract-ocr`
-- Google Gemini API key ([Get one here](https://aistudio.google.com/apikey))
 
 ### Installation
 
@@ -110,91 +124,41 @@ curl -X POST "http://localhost:8000/extract" \
   "status": "success"
 }
 ```
-## Test Set Predictions
-
-Predictions for the 4 files in the `test/` folder (saved in `predictions.csv`):
-
-| File Name | Agreement Value | Start Date | End Date | Renewal Notice (Days) | Party One | Party Two |
-|---|---|---|---|---|---|---|
-| 24158401-Rental-Agreement | 12000 | 01.04.2008 | 31.03.2009 | 60 | Hanumaiah | Vishal Bhardwaj |
-| 95980236-Rental-Agreement | 9000 | 01.04.2010 | 31.02.2011 | 30 | S.Sakunthala | V.V.Ravi Kian |
-| 156155545-Rental-Agreement-Kns-Home | 12000 | 15.12.2012 | 15.11.2013 | 30 | V.K.NATARAJ | VYSHNAVI DAIRY SPECIALITIES Private Ltd |
-| 228094620-Rental-Agreement | 15000 | 02.07.2013 | 31.05.2014 | 30 | KAPIL MEHROTRA | B.Kishore |
-
-> **Note**: LLM outputs may vary slightly between runs. Run `python main.py` (option 2) to regenerate predictions.
-
----
-
-## Per-Field Recall Scores
-
-### Training Set Recall (10 documents)
-
-| Field | Recall |
-|---|---|
-| Agreement Value | 60% (6/10) |
-| Agreement Start Date | 60% (6/10) |
-| Agreement End Date | 60% (6/10) |
-| Renewal Notice (Days) | 60% (6/10) |
-| Party One | 30% (3/10) |
-| Party Two | 50% (5/10) |
-| **Average Recall** | **53.33%** |
-
-### Test Set Recall (4 documents)
-
-| Field | Recall |
-|---|---|
-| Agreement Value | 100% (4/4) |
-| Agreement Start Date | 75% (3/4) |
-| Agreement End Date | 25% (1/4) |
-| Renewal Notice (Days) | 100% (4/4) |
-| Party One | 100% (4/4) |
-| Party Two | 75% (3/4) |
-| **Average Recall** | **79.2%** |
-
-### Key Observations
-
-- **High accuracy on structured DOCX files** — near-perfect extraction when text is clean
-- **OCR challenges on PNG files** — two PNG files (54770958, 54945838) have swapped content in the image vs filename, causing mismatches
-- **Date calculation edge cases** — LLM occasionally computes end dates differently (e.g., 31.02 vs 31.03)
-- **Party name variations** — minor differences like `Q` vs `O`, commas vs periods from OCR artifacts
-
----
 
 ## Project Structure
 
 ```
 metadata-extraction/
-├── main.py                  # Main pipeline orchestrator
-├── requirements.txt         # Python dependencies
-├── README.md                # This file
-├── Dockerfile               # Docker config for Render deployment
-├── render.yaml              # Render service configuration
-├── .gitignore               # Git ignore rules
-├── .dockerignore            # Docker ignore rules
-├── .env                     # API keys (not committed)
-├── predictions.csv          # Test set predictions (generated)
-├── train_predictions.csv    # Training set predictions (generated)
+├── main.py
+├── requirements.txt
+├── README.md
+├── Dockerfile
+├── render.yaml
+├── .gitignore
+├── .dockerignore
+├── .env
+├── predictions.csv
+├── train_predictions.csv
 ├── api/
-│   └── app.py               # FastAPI REST API
+│   └── app.py
 ├── data/
-│   ├── train.csv            # Training ground truth
-│   ├── test.csv             # Test ground truth
-│   ├── train/               # Training documents (.docx, .png)
-│   └── test/                # Test documents (.docx, .png)
+│   ├── train.csv
+│   ├── test.csv
+│   ├── train/
+│   └── test/
 ├── src/
 │   ├── __init__.py
-│   ├── text_extractor.py    # DOCX + OCR text extraction
-│   ├── prompt_builder.py    # Few-shot prompt construction
-│   ├── llm_client.py        # Gemini API client with retries
-│   ├── post_processor.py    # Output cleaning & normalization
-│   └── evaluate.py          # Recall metric computation
-└── notebooks/               # Jupyter notebooks (exploration)
+│   ├── text_extractor.py
+│   ├── prompt_builder.py
+│   ├── llm_client.py
+│   ├── post_processor.py
+│   └── evaluate.py
+└── notebooks/
 ```
 
 ---
 
 
-https://meta-data-extraction-from-documents.onrender.com
 ```
 
-> **Note**: Free tier instances spin down after inactivity. The first request after idle may take ~30-60 seconds.
+> Note: The first request after idle may take ~30-60 seconds.
