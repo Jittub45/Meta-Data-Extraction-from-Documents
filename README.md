@@ -247,7 +247,7 @@ The API is deployed as a Docker-based web service on [Render](https://render.com
 ### Live API URL
 
 ```
-https://metadata-extractor-api.onrender.com
+https://meta-data-extraction-from-documents.onrender.com
 ```
 
 ### How to Deploy (Step-by-Step)
@@ -288,18 +288,18 @@ https://metadata-extractor-api.onrender.com
 
 **Health Check:**
 ```bash
-curl https://metadata-extractor-api.onrender.com/health
+curl https://meta-data-extraction-from-documents.onrender.com/health
 ```
 
 **Extract Metadata:**
 ```bash
-curl -X POST "https://metadata-extractor-api.onrender.com/extract" \
+curl -X POST "https://meta-data-extraction-from-documents.onrender.com/extract" \
   -F "file=@rental-agreement.docx"
 ```
 
 **Interactive API Docs (Swagger):**
 ```
-https://metadata-extractor-api.onrender.com/docs
+https://meta-data-extraction-from-documents.onrender.com/docs
 ```
 
 > **Note**: Free tier instances spin down after inactivity. The first request after idle may take ~30-60 seconds.
