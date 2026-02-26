@@ -1,6 +1,6 @@
 # Document Metadata Extraction System
 
-> ### 🚀 **Live Demo: [https://meta-data-extraction-from-documents.onrender.com](https://meta-data-extraction-from-documents.onrender.com)**
+> ### **Live Demo: [https://meta-data-extraction-from-documents.onrender.com](https://meta-data-extraction-from-documents.onrender.com)**
 
 An AI-powered system that extracts structured metadata from rental/lease agreement documents (`.docx` and `.png` files) using Large Language Models (Google Gemini) with few-shot prompting.
 
@@ -11,30 +11,9 @@ An AI-powered system that extracts structured metadata from rental/lease agreeme
 ### Architecture
 
 ```
-Document (.docx / .png)
-    │
-    ▼
-┌──────────────────────────┐
-│  1. Text Extraction      │  python-docx (DOCX) / Tesseract OCR + OpenCV (images)
-└──────────────────────────┘
-    │
-    ▼
-┌──────────────────────────┐
-│  2. Prompt Construction  │  Few-shot prompt with 5 examples + chain-of-thought
-└──────────────────────────┘
-    │
-    ▼
-┌──────────────────────────┐
-│  3. LLM Inference        │  Google Gemini API (multi-model rotation + retries)
-└──────────────────────────┘
-    │
-    ▼
-┌──────────────────────────┐
-│  4. Post-Processing      │  Title stripping, date normalization, value cleaning
-└──────────────────────────┘
-    │
-    ▼
-  Structured JSON / CSV Output
+Document (.docx/.png) ──▶ Text Extraction ──▶ Prompt Construction ──▶ LLM Inference ──▶ Post-Processing ──▶ JSON/CSV Output
+                          python-docx / OCR    5 few-shot examples     Google Gemini      Title stripping
+                          Tesseract + OpenCV   Chain-of-thought        Multi-model retry  Date & value cleanup
 ```
 
 ### Key Design Decisions
@@ -131,16 +110,6 @@ curl -X POST "http://localhost:8000/extract" \
   "status": "success"
 }
 ```
-
-**API Endpoints:**
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/` | API status |
-| GET | `/health` | Health check |
-| POST | `/extract` | Upload file → extract metadata |
-
----
-
 ## Test Set Predictions
 
 Predictions for the 4 files in the `test/` folder (saved in `predictions.csv`):
@@ -224,84 +193,8 @@ metadata-extraction/
 
 ---
 
-## Dependencies
 
-| Package | Purpose |
-|---|---|
-| python-docx | Extract text from .docx files |
-| pytesseract | OCR engine interface |
-| Pillow | Image loading and basic processing |
-| opencv-python | Advanced image preprocessing for OCR |
-| numpy | Array operations for image processing |
-| pandas | Data manipulation and CSV I/O |
-| google-generativeai | Google Gemini API client |
-| python-dotenv | Environment variable management |
-| fastapi | REST API framework |
-| uvicorn | ASGI server |
-| python-multipart | File upload support for FastAPI |
-
----
-
-## Deployment on Render
-
-The API is deployed as a Docker-based web service on [Render](https://render.com).
-
-### Live API URL
-
-```
 https://meta-data-extraction-from-documents.onrender.com
-```
-
-### How to Deploy (Step-by-Step)
-
-1. **Push code to GitHub**
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit - metadata extraction system"
-   git remote add origin https://github.com/<your-username>/metadata-extraction.git
-   git push -u origin main
-   ```
-
-2. **Create a new Web Service on Render**
-   - Go to [Render Dashboard](https://dashboard.render.com)
-   - Click **New** → **Web Service**
-   - Connect your GitHub repository
-   - Select the `metadata-extraction` repo
-
-3. **Configure the service**
-   - **Name**: `metadata-extractor-api`
-   - **Runtime**: Docker
-   - **Dockerfile Path**: `./Dockerfile`
-   - **Instance Type**: Free (or Starter for better performance)
-
-4. **Set Environment Variables**
-   - Go to **Environment** tab
-   - Add:
-     - `GEMINI_API_KEY` = your Google Gemini API key
-     - `GEMINI_API_KEY_2` = (optional) second API key for rotation
-
-5. **Deploy**
-   - Click **Create Web Service**
-   - Render will build the Docker image and deploy automatically
-   - Wait for deployment to show **Live** status
-
-### Using the Deployed API
-
-**Health Check:**
-```bash
-curl https://meta-data-extraction-from-documents.onrender.com/health
-```
-
-**Extract Metadata:**
-```bash
-curl -X POST "https://meta-data-extraction-from-documents.onrender.com/extract" \
-  -F "file=@rental-agreement.docx"
-```
-
-**Interactive API Docs (Swagger):**
-```
-https://meta-data-extraction-from-documents.onrender.com/docs
 ```
 
 > **Note**: Free tier instances spin down after inactivity. The first request after idle may take ~30-60 seconds.
