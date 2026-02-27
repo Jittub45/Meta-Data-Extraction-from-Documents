@@ -65,8 +65,14 @@ An AI-powered system that extracts structured metadata from rental/lease agreeme
 </tr>
 </table>
 
-Note: Limited number(10) of data present to train
+## ⚠️ Important: Why Test Recall > Train Recall
 
+| # | Reason | Impact |
+|---|--------|--------|
+| 1 | `24158401` file is **missing** from train folder | 0% recall for that document |
+| 2 | Train has **harder documents** (scanned images + corrupted `.docx`) | Garbled OCR → wrong extractions |
+| 3 | Test set is **smaller** (4 docs vs 10) | Each correct prediction has bigger weight |
+| 4 | Test files are **cleaner** (2 `.pdf.docx` vs noisy scans) | Higher extraction accuracy |
 
 
 ---
