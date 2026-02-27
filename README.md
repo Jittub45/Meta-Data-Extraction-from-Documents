@@ -6,12 +6,12 @@ An AI-powered system that extracts structured metadata from rental/lease agreeme
 
 
 ---
-### Preview
+### Preview Image
 
 <p align="center">
-  <img src="preview/Preview Image I.png" alt="Preview 1" width="48%" />
+  <img src="preview/Preview Image II.png" alt="Preview 1" width="48%" />
   &nbsp;&nbsp;
-  <img src="preview/Preview Image II.png" alt="Preview 2" width="48%" />
+  <img src="preview/Preview Image I.png" alt="Preview 2" width="48%" />
 </p>
 
 ## Solution Approach
@@ -183,10 +183,10 @@ metadata-extraction/
 ```
 
 ### 1. Smarter Extraction
-      - **Fine-tune open-source LLMs**
-      - **RAG-powered few-shot selection**
-      - **Multimodal models** 
-      - **Self-improving prompts** 
+      - Fine-tune open-source LLMs
+      - RAG-powered few-shot selection
+      - Multimodal models
+      - Self-improving prompts
 ### 2. Production-Ready Architecture
 ### 3. Security & Privacy
 ### 4. Better UX
